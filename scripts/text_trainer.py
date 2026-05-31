@@ -476,16 +476,13 @@ def main():
         train_cmd = train_info["run_cmd"]
 
     elif args.task_type == TaskType.ENVIRONMENTTASK.value:
-        # PvP tournament 2026-05-25+: validator sends `environment_names: list[str]`
-        # for multi-env tasks (R1=2 envs, R2=4 envs, R3=6 envs). ALL envs are
-        # PvP-evaluated head-to-head → SFT data MUST cover all listed envs.
-        # Discord 2026-05-23: "you can't optimise for a single env training since
-        # you'll be pipped on all the others."
+        # Tournament rule: "You may not do any SFT for environment tasks."
+        # All environment tasks are routed to GRPO path only.
         #
         # Routing:
-        #   - environment_names list with len >= 2 → multi-env path (scaled per-env
-        #     trajectory gen + merge + single SFT)
-        #   - environment_names list with len == 1 → single-env (treat first as legacy)
+        #   - environment_names list with len >= 2 → multi-env: log all envs, use first
+        #     non-intercode env for training config
+        #   - environment_names list with len == 1 → single-env
         #   - environment_name str (legacy) → single-env
         env_names = dataset_type_dict.get("environment_names")
         is_multi_env = (
@@ -495,19 +492,12 @@ def main():
         )
 
         if is_multi_env:
-            # Validate every env in the payload supports SFT — fail fast on unsupported
-            unsupported = [e for e in env_names if not supports_sft(e)]
-            if unsupported:
-                raise ValueError(
-                    f"Multi-env task contains envs not in SFT registry: {unsupported}. "
-                    f"Add a trajectory generator + register in envs/sft_env_configs.py."
-                )
             print(f"[text_trainer] Multi-env task detected: {env_names} "
-                  f"(n={len(env_names)}). Running scaled per-env trajectory gen + "
-                  f"merge + single SFT.", flush=True)
+                  f"(n={len(env_names)}). Routing to GRPO (no SFT per tournament rules).",
+                  flush=True)
             log_tournament_environment(",".join(env_names))
-            train_info = get_sft_env_training_json_multi_env(train_info, env_names)
-            tokenize_cmd = train_info["generate_cmd"]
+            # Use the first env name as primary training target
+            env_name = env_names[0]
         else:
             # Single-env path (legacy + R0/organic)
             if env_names and len(env_names) == 1:
@@ -517,12 +507,10 @@ def main():
             else:
                 env_name = dataset_type_dict.get("environment_name", "")
             log_tournament_environment(env_name)
-            if supports_sft(env_name):
-                train_info = get_sft_env_training_json(train_info)
-                tokenize_cmd = train_info["generate_cmd"]
-            else:
-                train_info = get_env_training_json(train_info)
-                tokenize_cmd = ""
+
+        # Always use GRPO — SFT is not permitted for environment tasks.
+        train_info = get_env_training_json(train_info)
+        tokenize_cmd = ""
         train_cmd = train_info["run_cmd"]
     else:
         raise ValueError(f"Task type {args.task_type} not supported")

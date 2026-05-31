@@ -418,6 +418,11 @@ async def run_environment_server_container(environment_name: str, log_labels: di
             network=cst.INTERNAL_BRIDGE_NAME,
         )
         return container
+    elif environment_name == "intercode":
+        # InterCode uses INDIVIDUAL eval type — no env server needed during training.
+        # The validator runs a separate sidecar container at eval time.
+        logger.info("InterCode environment: no server container needed during training.", extra=log_labels)
+        return None
     else:
         return None
 

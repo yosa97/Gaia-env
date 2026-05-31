@@ -1,4 +1,5 @@
 import os
+from enum import Enum
 
 from dotenv import load_dotenv
 
@@ -20,8 +21,18 @@ MINER_DOCKER_IMAGE = "weightswandering/tuning_miner:latest"
 MINER_DOCKER_IMAGE_DIFFUSION = "diagonalge/miner-diffusion-flux:latest"
 VALIDATOR_DOCKER_IMAGE = "weightswandering/tuning_vali:latest"
 VALIDATOR_DOCKER_IMAGE_DIFFUSION = "diagonalge/tuning_validator_diffusion:latest"
+VALIDATOR_DOCKER_IMAGE_PVP = "phoenixbeaudry/pvp-evaluator:testing"
+VALIDATOR_DOCKER_IMAGE_INTERCODE = "phoenixbeaudry/env-eval-intercode:testing"
 
 CONTAINER_EVAL_RESULTS_PATH = "/aplp/evaluation_results.json"
+CONTAINER_EVAL_SCORE_KEY = "score"
+LORA_ADAPTER_CONFIG_FILE = "adapter_config.json"
+
+
+class EvalType(str, Enum):
+    MCTS = "mcts"
+    INDIVIDUAL = "individual"
+    PVP = "pvp"
 
 CONFIG_DIR = "core/config/"
 OUTPUT_DIR = "core/outputs/"
