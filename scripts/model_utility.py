@@ -47,7 +47,10 @@ def is_reasoning_tokenizer(tokenizer: AutoTokenizer) -> bool:
 
 def get_model_architecture(model_path: str) -> str:
     try:
-        config = AutoConfig.from_pretrained(model_path)
+        # Use local_files_only for local paths to avoid HF repo ID validation
+        # error in transformers>=4.57 (paths with multiple slashes are rejected).
+        kwargs = {"local_files_only": True} if os.path.isdir(model_path) else {}
+        config = AutoConfig.from_pretrained(model_path, **kwargs)
         architectures = config.architectures
         if len(architectures) > 1:
             return "Multiple architectures"

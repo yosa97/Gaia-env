@@ -734,7 +734,16 @@ def main():
         task_id = train_request["task_id"]
         
         output_dir = training_args.output_dir
-        tokenizer = AutoTokenizer.from_pretrained(train_request["model_path"])
+
+        # transformers>=4.57 + huggingface_hub validates repo IDs strictly.
+        # Local cache paths like /cache/models/org--name have multiple slashes
+        # and fail validation when treated as repo IDs. Using local_files_only=True
+        # skips the HF hub validation and loads directly from the local directory.
+        _model_path = train_request["model_path"]
+        _is_local = os.path.isdir(_model_path)
+        _load_kwargs = {"local_files_only": True} if _is_local else {}
+
+        tokenizer = AutoTokenizer.from_pretrained(_model_path, **_load_kwargs)
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
 
@@ -757,6 +766,7 @@ def main():
             use_cache=False if training_args.gradient_checkpointing else True,
             device_map=device_map,
             quantization_config=quantization_config,
+            **_load_kwargs,
         )
 
         if training_args.use_liger:
@@ -766,7 +776,7 @@ def main():
         else:
             model_class = transformers.AutoModelForCausalLM
 
-        model = model_class.from_pretrained(train_request["model_path"], **model_kwargs)
+        model = model_class.from_pretrained(_model_path, **model_kwargs)
 
         # some model need to set the generation config or encounter the invalid generation config error
         set_generation_config(train_request["model_name"], model)
