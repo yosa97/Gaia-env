@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Resolve repo root so this script can be run from any directory
+# (e.g. bash examples/run_enviroment.sh  OR  cd examples && bash run_enviroment.sh)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+
 TASK_ID="1"
 MODEL=""
 DATASET="dummy"
@@ -36,8 +41,8 @@ else
 fi
 
 # ── Directory setup ────────────────────────────────────────────────────────
-CHECKPOINTS_DIR="$(pwd)/secure_checkpoints"
-OUTPUTS_DIR="$(pwd)/outputs"
+CHECKPOINTS_DIR="$REPO_ROOT/secure_checkpoints"
+OUTPUTS_DIR="$REPO_ROOT/outputs"
 mkdir -p "$CHECKPOINTS_DIR"
 chmod 777 "$CHECKPOINTS_DIR"
 mkdir -p "$OUTPUTS_DIR"
@@ -48,13 +53,13 @@ NETWORK_NAME="env_training_net"
 docker network create "$NETWORK_NAME" 2>/dev/null || true
 
 # Build the downloader image
-docker build -t trainer-downloader -f dockerfiles/trainer-downloader.dockerfile .
+docker build -t trainer-downloader -f "$REPO_ROOT/dockerfiles/trainer-downloader.dockerfile" "$REPO_ROOT"
 
 # Build the trainer image
-docker build -t standalone-text-trainer -f dockerfiles/standalone-text-trainer.dockerfile .
+docker build -t standalone-text-trainer -f "$REPO_ROOT/dockerfiles/standalone-text-trainer.dockerfile" "$REPO_ROOT"
 
 # Build the hf-uploader image
-docker build -t hf-uploader -f dockerfiles/hf-uploader.dockerfile .
+docker build -t hf-uploader -f "$REPO_ROOT/dockerfiles/hf-uploader.dockerfile" "$REPO_ROOT"
 
 # Download model and generate dummy dataset
 echo "Downloading model..."
